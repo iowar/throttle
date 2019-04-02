@@ -6,11 +6,12 @@ import (
 )
 
 type Throttle struct {
-	Update       chan struct{} // update channel
-	quit         chan struct{} // quit channel
-	interval     time.Duration // interval
-	isActive     bool          // is active
-	sync.RWMutex               // embedded mutex
+	Update   chan struct{} // update channel
+	quit     chan struct{} // quit channel
+	interval time.Duration // interval
+	isActive bool          // is active
+	mu       *sync.Mutex   // mutex for protecting ticker
+	lock     *sync.RWMutex // rwmutex for protecting fields
 }
 
 // Create new throttle.
@@ -20,25 +21,29 @@ func NewThrottle(interval time.Duration) *Throttle {
 		quit:     make(chan struct{}),
 		interval: interval,
 		isActive: false,
+		mu:       &sync.Mutex{},
+		lock:     &sync.RWMutex{},
 	}
 }
 
 // Get tick stat.
 func (t *Throttle) getStatus() bool {
-	t.RLock()
-	defer t.RUnlock()
+	t.lock.RLock()
+	defer t.lock.RUnlock()
 	return t.isActive
 }
 
 // Set tick stat.
 func (t *Throttle) setStatus(status bool) {
-	t.Lock()
-	defer t.Unlock()
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	t.isActive = status
 }
 
 // Generate tick and send signal to Update channel.
 func (t *Throttle) generateTick() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.setStatus(true)
 	defer t.setStatus(false)
 
@@ -59,8 +64,8 @@ func (t *Throttle) generateTick() {
 
 // Get interval duration.
 func (t *Throttle) GetInterval() time.Duration {
-	t.RLock()
-	defer t.RUnlock()
+	t.lock.RLock()
+	defer t.lock.RUnlock()
 	return t.interval
 }
 
@@ -70,9 +75,9 @@ func (t *Throttle) ChangeInterval(interval time.Duration) {
 	if stat {
 		t.Stop()
 	}
-	t.Lock()
+	t.lock.Lock()
 	t.interval = interval
-	t.Unlock()
+	t.lock.Unlock()
 	if stat {
 		go t.generateTick()
 	}
@@ -83,14 +88,15 @@ func (t *Throttle) Start() {
 	if t.getStatus() {
 		t.Stop()
 	}
+
 	go t.generateTick()
 }
 
 // Stop throttle.
 // Transmit must be guaranteed.
 func (t *Throttle) Stop() {
-	t.Lock()
-	defer t.Unlock()
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	select {
 	case t.quit <- struct{}{}:
 	}
