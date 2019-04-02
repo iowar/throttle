@@ -80,16 +80,18 @@ func (t *Throttle) ChangeInterval(interval time.Duration) {
 
 // Start throttle.
 func (t *Throttle) Start() {
-	t.Stop()
+	if t.getStatus() {
+		t.Stop()
+	}
 	go t.generateTick()
 }
 
 // Stop throttle.
+// Transmit must be guaranteed.
 func (t *Throttle) Stop() {
 	t.Lock()
 	defer t.Unlock()
 	select {
 	case t.quit <- struct{}{}:
-	default:
 	}
 }
