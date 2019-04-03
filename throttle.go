@@ -71,14 +71,14 @@ func (t *Throttle) GetInterval() time.Duration {
 
 // Change interval.
 func (t *Throttle) ChangeInterval(interval time.Duration) {
-	stat := t.getStatus()
-	if stat {
+	active := t.getStatus()
+	if active {
 		t.Stop()
 	}
 	t.lock.Lock()
 	t.interval = interval
 	t.lock.Unlock()
-	if stat {
+	if active {
 		go t.generateTick()
 	}
 }
