@@ -2,7 +2,7 @@
 [![GoDoc](https://godoc.org/github.com/iowar/throttle?status.svg)](https://godoc.org/github.com/iowar/throttle)
 
 In some cases it may be necessary to change the throttle at run time.
-The 'Update' chan in Throttle can be used to provide communication like time.Ticker.
+The 'Update' channel in throttle can be used to provide triggering like time.Ticker.
 
 ## Installation
 
