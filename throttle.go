@@ -45,7 +45,6 @@ func (t *Throttle) generateTick() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.setStatus(true)
-	defer t.setStatus(false)
 
 	ticker := time.NewTicker(t.GetInterval())
 	for {
@@ -93,11 +92,15 @@ func (t *Throttle) Start() {
 }
 
 // Stop throttle.
+// Transmit must be guaranteed.
 func (t *Throttle) Stop() {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	select {
-	case t.quit <- struct{}{}:
-	default:
+	active := t.getStatus()
+	if active {
+		t.setStatus(false)
+		t.lock.Lock()
+		select {
+		case t.quit <- struct{}{}:
+		}
+		t.lock.Unlock()
 	}
 }
