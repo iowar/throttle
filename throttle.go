@@ -93,11 +93,11 @@ func (t *Throttle) Start() {
 }
 
 // Stop throttle.
-// Transmit must be guaranteed.
 func (t *Throttle) Stop() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	select {
 	case t.quit <- struct{}{}:
+	default:
 	}
 }
